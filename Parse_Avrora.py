@@ -36,12 +36,11 @@ if __name__ == "__main__":
     data_result = pd.DataFrame(columns=['Url', 'Spec'])
 
     try:
-        with open(f'backup/backup_speed_{date}', 'rb') as backup:
-            data_result = pickle.load(backup)
-            common = data.merge(data_result, on='Url')
-            data = data[~data.Url.isin(common.Url)]
+        data_result = pd.read_pickle(f'backup/backup_speed_{date}')
+        common = data.merge(data_result, on='Url')
+        data = data[~data.Url.isin(common.Url)]
     except FileNotFoundError:
-        print(FileNotFoundError)
+        print('Not found backup')
 
     with tqdm(total=len(data)) as progress_bar:
         for url in data.itertuples():
@@ -51,8 +50,7 @@ if __name__ == "__main__":
             except AttributeError:
                 spec = 0
             data_result = data_result.append({'Url': url.Url, 'Spec': spec}, ignore_index=True)
-            with open(f'backup/backup_speed_{date}', 'wb') as backup:
-                pickle.dump(data_result, backup)
+            data_result.to_pickle(f'backup/backup_speed_{date}')
             progress_bar.update(1)
     data_result.to_csv('result_parse_avrora.csv', sep=';', encoding='utf-8-sig', index=False)
 
