@@ -17,23 +17,24 @@ def get_html(url: str) -> BeautifulSoup:
         print(f'Error {url}')
 
 
-def get_specifications(soup: BeautifulSoup) -> pd:
-        return soup.find('table', attrs={'class': 'char'}).text
+def get_specifications(soup: BeautifulSoup) -> str:
+    return soup.find('table', attrs={'class': 'char'}).text
+
+
+def get_major_image_url(soup: BeautifulSoup) -> str:
+    soup = soup.find('div', attrs={'class': 'gallery-item__content'})
+    return soup.img['src']
 
 
 def filter_str(string: str) -> str:
     return string.strip().replace('\n\n', '\n').replace(':\n', ': ').replace('\n\n', '\n')
 
 
-def _filter_data(data: pd, data_backup: pd) -> pd:
-    common = data.merge(data_backup, on='Url')
-    return data[~data.Url.isin(common.Url)]
-
-
 if __name__ == "__main__":
+
     date = datetime.date.today()
     data = pd.read_csv('input_file.txt', header=None, names=["Url"])
-    data_result = pd.DataFrame(columns=['Url', 'Spec'])
+    data_result = pd.DataFrame(columns=['Url', 'Spec', 'Major_image'])
 
     try:
         data_result = pd.read_pickle(f'backup/backup_speed_{date}')
@@ -45,13 +46,21 @@ if __name__ == "__main__":
     with tqdm(total=len(data)) as progress_bar:
         for url in data.itertuples():
             try:
-                spec = get_specifications(get_html(url.Url))
+                soup = get_html(url.Url)
+                spec = get_specifications(soup)
                 spec = filter_str(spec)
             except AttributeError:
                 spec = 0
-            data_result = data_result.append({'Url': url.Url, 'Spec': spec}, ignore_index=True)
+            try:
+                image_url = get_major_image_url(soup)
+            except AttributeError:
+                image_url = 0
+
+
+            data_result = data_result.append({'Url': url.Url, 'Spec': spec, 'Major_image': image_url},
+                                             ignore_index=True)
             data_result.to_pickle(f'backup/backup_speed_{date}')
             progress_bar.update(1)
     data_result.to_csv('result_parse_avrora.csv', sep=';', encoding='utf-8-sig', index=False)
 
-    print(data_result)
+    print('Nice, maaaaaaan!')
